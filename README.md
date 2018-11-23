@@ -1,6 +1,6 @@
 # fifolock
 
-A flexible low-level tool to make synchronisation primitives in asyncio Python
+A flexible low-level tool to make synchronisation primitives in asyncio Python. As the name suggests, locks are granted strictly in the order requested: first-in-first-out.
 
 
 ## Installation
