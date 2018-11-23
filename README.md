@@ -60,3 +60,24 @@ async def write():
     async with lock(Write):
         # exclusive access
 ```
+
+### Semaphore
+
+```python
+import asyncio
+from fifolock import FifoLock
+
+
+class SemaphoreBase(asyncio.Future):
+    @classmethod
+    def is_compatible(cls, holds):
+        return holds[cls] < cls.size
+
+
+lock = FifoLock()
+Semaphore = type('Semaphore', (SemaphoreBase, ), {'size': 3})
+
+async def access():
+    async with lock(Semaphore):
+        # at most 3 concurrent accesses
+```
