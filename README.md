@@ -81,3 +81,16 @@ async def access():
     async with lock(Semaphore):
         # at most 3 concurrent accesses
 ```
+
+
+## Design choices
+
+Each mode of the lock is a subclass of `asyncio.Future`. This could be seen as a leak some of the internals of `FifoLock`, but it allows for clear client and internal code.
+
+- Classes are hashable, so each can be a key in the `holds` dictionary passed to the `is_compatible` method. This allows the compatibility conditions to be read clearly in the client code, and the `holds` dictionary to be mutated clearly internally.
+
+- An instance of it, created inside `FifoLock`, is _both_ the object awaited upon, and stored in a deque with a way of accessing its `is_compatible` method.
+
+The fact it's a class and not an instance of a class also makes clear it is to store no state, merely configuration.
+
+A downside is that for configurable modes, such as for a semaphore, the client must dynamically create a class: this is not a frequently-used pattern.
