@@ -91,6 +91,6 @@ Each mode of the lock is a subclass of `asyncio.Future`. This could be seen as a
 
 - An instance of it, created inside `FifoLock`, is _both_ the object awaited upon, and stored in a deque with a way of accessing its `is_compatible` method.
 
-The fact it's a class and not an instance of a class also makes clear it is to store no state, merely configuration.
+- The fact it's a class and not an instance of a class also makes clear it is to store no state, merely configuration.
 
 A downside is that for configurable modes, such as for a semaphore, the client must dynamically create a class: this is not a frequently-used pattern.
