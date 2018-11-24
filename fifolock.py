@@ -10,21 +10,18 @@ class FifoLock():
         self._holds = collections.defaultdict(int)
 
     def _maybe_acquire(self):
-        while True:
-            if not self._waiters:
-                break
+        while self._waiters:
 
             if self._waiters[0].cancelled():
                 self._waiters.popleft()
-                continue
 
-            if self._waiters[0].is_compatible(self._holds):
+            elif self._waiters[0].is_compatible(self._holds):
                 waiter = self._waiters.popleft()
                 self._holds[type(waiter)] += 1
                 waiter.set_result(None)
-                continue
 
-            break
+            else:
+                break
 
     @contextlib.asynccontextmanager
     async def __call__(self, lock_mode_type):
