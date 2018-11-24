@@ -83,6 +83,13 @@ async def access():
 ```
 
 
+## Running tests
+
+```bash
+python setup.py test
+```
+
+
 ## Design choices
 
 Each mode of the lock is a subclass of `asyncio.Future`. This could be seen as a leak some of the internals of `FifoLock`, but it allows for clear client and internal code.
