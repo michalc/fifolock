@@ -73,7 +73,7 @@ class TestFifoLock(unittest.TestCase):
         task_states[1].done.set_result(None)
         await asyncio.sleep(0)
         await asyncio.sleep(0)
-         # ... a queued write starts only after all previous access finished...
+        # ... a queued write starts only after all previous access finished...
         self.assertEqual(all(has_started(task_states)[3:4]), True)
         self.assertEqual(any(has_started(task_states)[4:]), False)
 
@@ -97,7 +97,6 @@ class TestFifoLock(unittest.TestCase):
 
         task_states[5].done.set_result(None)
         concurrently_added_task[0].done.set_result(None)
-
 
     @async_test
     async def test_semaphore(self):
