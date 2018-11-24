@@ -97,3 +97,30 @@ class TestFifoLock(unittest.TestCase):
 
         task_states[5].done.set_result(None)
         concurrently_added_task[0].done.set_result(None)
+
+
+    @async_test
+    async def test_semaphore(self):
+        class SemaphoreBase(asyncio.Future):
+            @classmethod
+            def is_compatible(cls, holds):
+                return holds[cls] < cls.size
+
+        lock = FifoLock()
+        Semaphore = type('Semaphore', (SemaphoreBase, ), {'size': 2})
+
+        task_states = create_lock_tasks(lock, Semaphore, Semaphore, Semaphore)
+
+        await asyncio.sleep(0)
+        # Ensure only the first two have started...
+        self.assertEqual(all(has_started(task_states)[0:2]), True)
+        self.assertEqual(any(has_started(task_states)[2:]), False)
+
+        # ... and one finishing allows the final to proceed
+        task_states[1].done.set_result(None)
+        await asyncio.sleep(0)
+        await asyncio.sleep(0)
+        self.assertEqual(all(has_started(task_states)[2:2]), True)
+
+        task_states[0].done.set_result(None)
+        task_states[2].done.set_result(None)
