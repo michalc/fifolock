@@ -1,4 +1,4 @@
-# fifolock
+# fifolock [![CircleCI](https://circleci.com/gh/michalc/fifolock.svg?style=svg)](https://circleci.com/gh/michalc/fifolock) [![Maintainability](https://api.codeclimate.com/v1/badges/9f7c8caf9b66ad2175e4/maintainability)](https://codeclimate.com/github/michalc/fifolock/maintainability) [![Test Coverage](https://api.codeclimate.com/v1/badges/9f7c8caf9b66ad2175e4/test_coverage)](https://codeclimate.com/github/michalc/fifolock/test_coverage)
 
 A flexible low-level tool to make synchronisation primitives in asyncio Python. As the name suggests, locks are granted strictly in the order requested: first-in-first-out.
 
