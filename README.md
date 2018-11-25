@@ -102,4 +102,4 @@ Each mode of the lock is a subclass of `asyncio.Future`. This could be seen as a
 
 A downside is that for configurable modes, such as for a semaphore, the client must dynamically create a class: this is not a frequently-used pattern.
 
-The fact that the locks _not_ reentrant is deliberate: the class of algorithms this lock is designed for does not require this, and so this feature would add unnecessary complexity, and would presumably be slower.
+The fact that the lock is _not_ reentrant is deliberate: the class of algorithms this is designed for does not require this. This would add unnecessary complexity, and presumably be slower.
