@@ -1,6 +1,6 @@
 # fifolock [![CircleCI](https://circleci.com/gh/michalc/fifolock.svg?style=svg)](https://circleci.com/gh/michalc/fifolock) [![Maintainability](https://api.codeclimate.com/v1/badges/9f7c8caf9b66ad2175e4/maintainability)](https://codeclimate.com/github/michalc/fifolock/maintainability) [![Test Coverage](https://api.codeclimate.com/v1/badges/9f7c8caf9b66ad2175e4/test_coverage)](https://codeclimate.com/github/michalc/fifolock/test_coverage)
 
-A flexible low-level tool to make synchronisation primitives in asyncio Python. As the name suggests, locks are granted strictly in the order requested: first-in-first-out.
+A flexible low-level tool to make synchronisation primitives in asyncio Python. As the name suggests, locks are granted strictly in the order requested: first-in-first-out; and are not reentrant.
 
 
 ## Installation
@@ -101,3 +101,5 @@ Each mode of the lock is a subclass of `asyncio.Future`. This could be seen as a
 - The fact it's a class and not an instance of a class also makes clear it is to store no state, merely configuration.
 
 A downside is that for configurable modes, such as for a semaphore, the client must dynamically create a class: this is not a frequently-used pattern.
+
+The fact that the locks _not_ reentrant is deliberate: the class of algorithms this lock is designed for does not require this, and so this feature would add unnecessary complexity, and would presumably be slower.
