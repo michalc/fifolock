@@ -8,9 +8,9 @@ from fifolock import FifoLock
 TaskState = collections.namedtuple('TaskState', ['started', 'done', 'task'])
 
 
-def create_lock_tasks(lock, *modes):
+def create_lock_tasks(*modes):
     async def access(mode, started, done):
-        async with lock(mode):
+        async with mode:
             started.set_result(None)
             await done
 
@@ -97,8 +97,7 @@ class TestFifoLock(unittest.TestCase):
         lock = FifoLock()
 
         started_history = await mutate_tasks_in_sequence(create_lock_tasks(
-            lock,
-            Mutex, Mutex),
+            lock(Mutex), lock(Mutex)),
             complete(0), complete(1),
         )
 
@@ -111,8 +110,7 @@ class TestFifoLock(unittest.TestCase):
         lock = FifoLock()
 
         tasks = create_lock_tasks(
-            lock,
-            Mutex, Mutex)
+            lock(Mutex), lock(Mutex))
         exp = Exception('Raised exception')
         started_history = await mutate_tasks_in_sequence(
             tasks,
@@ -129,8 +127,7 @@ class TestFifoLock(unittest.TestCase):
         lock = FifoLock()
 
         started_history = await mutate_tasks_in_sequence(create_lock_tasks(
-            lock,
-            Mutex, Mutex, Mutex),
+            lock(Mutex), lock(Mutex), lock(Mutex)),
             complete(0), cancel(1), complete(2),
         )
 
@@ -144,8 +141,7 @@ class TestFifoLock(unittest.TestCase):
         lock = FifoLock()
 
         started_history = await mutate_tasks_in_sequence(create_lock_tasks(
-            lock,
-            Mutex, Mutex, Mutex),
+            lock(Mutex), lock(Mutex), lock(Mutex)),
             cancel(1), complete(0), null, complete(2),
         )
 
@@ -158,10 +154,10 @@ class TestFifoLock(unittest.TestCase):
 
         lock = FifoLock()
 
-        tasks_1 = create_lock_tasks(lock, Mutex)
+        tasks_1 = create_lock_tasks(lock(Mutex))
         started_history_1 = await mutate_tasks_in_sequence(tasks_1)  # No mutation
 
-        tasks_2 = create_lock_tasks(lock, Mutex)
+        tasks_2 = create_lock_tasks(lock(Mutex))
         started_history_2 = await mutate_tasks_in_sequence(
             tasks_1 + tasks_2,
             complete(0), complete(1),
@@ -176,8 +172,7 @@ class TestFifoLock(unittest.TestCase):
         lock = FifoLock()
 
         started_history = await mutate_tasks_in_sequence(create_lock_tasks(
-            lock,
-            Write, Write),
+            lock(Write), lock(Write)),
             complete(0), complete(1),
         )
 
@@ -190,8 +185,7 @@ class TestFifoLock(unittest.TestCase):
         lock = FifoLock()
 
         started_history = await mutate_tasks_in_sequence(create_lock_tasks(
-            lock,
-            Write, Read),
+            lock(Write), lock(Read)),
             complete(0), complete(1),
         )
 
@@ -204,8 +198,7 @@ class TestFifoLock(unittest.TestCase):
         lock = FifoLock()
 
         started_history = await mutate_tasks_in_sequence(create_lock_tasks(
-            lock,
-            Read, Read),
+            lock(Read), lock(Read)),
             complete(0), complete(1),
         )
 
@@ -218,8 +211,7 @@ class TestFifoLock(unittest.TestCase):
         lock = FifoLock()
 
         started_history = await mutate_tasks_in_sequence(create_lock_tasks(
-            lock,
-            Read, Write),
+            lock(Read), lock(Write)),
             complete(0), complete(1),
         )
 
@@ -232,8 +224,7 @@ class TestFifoLock(unittest.TestCase):
         lock = FifoLock()
 
         started_history = await mutate_tasks_in_sequence(create_lock_tasks(
-            lock,
-            Read, Read, Write),
+            lock(Read), lock(Read), lock(Write)),
             complete(1), complete(0), complete(2),
         )
 
@@ -247,8 +238,7 @@ class TestFifoLock(unittest.TestCase):
         Semaphore = type('Semaphore', (SemaphoreBase, ), {'size': 2})
 
         started_history = await mutate_tasks_in_sequence(create_lock_tasks(
-            lock,
-            Semaphore, Semaphore, Semaphore),
+            lock(Semaphore), lock(Semaphore), lock(Semaphore)),
             complete(1), complete(0), complete(2),
         )
 
