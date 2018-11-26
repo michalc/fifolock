@@ -30,30 +30,30 @@ async def mutate_tasks_in_sequence(task_states, *funcs):
         await asyncio.sleep(0)
         await asyncio.sleep(0)
         history.append([state.started.done() for state in task_states])
-        await func(task_states)
+        func(task_states)
 
     return history
 
 
 def cancel(i):
-    async def func(tasks):
+    def func(tasks):
         tasks[i].task.cancel()
     return func
 
 
 def complete(i):
-    async def func(tasks):
+    def func(tasks):
         tasks[i].done.set_result(None)
     return func
 
 
 def exception(i, exception):
-    async def func(tasks):
+    def func(tasks):
         tasks[i].done.set_exception(exception)
     return func
 
 
-async def null(_):
+def null(_):
     pass
 
 
