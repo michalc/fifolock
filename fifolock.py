@@ -37,12 +37,7 @@ class _FifoLockContextManager():
         lock_mode = self._lock_mode_type()
         self._waiters.append(lock_mode)
         self._maybe_acquire()
-
-        try:
-            await lock_mode
-        except asyncio.CancelledError:
-            self._maybe_acquire()
-            raise
+        await lock_mode
 
     async def __aexit__(self, _, __, ___):
         self._holds[self._lock_mode_type] -= 1
