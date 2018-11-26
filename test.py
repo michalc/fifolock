@@ -55,6 +55,12 @@ def async_test(func):
     return wrapper
 
 
+class Mutex(asyncio.Future):
+    @staticmethod
+    def is_compatible(holds):
+        return not holds[Mutex]
+
+
 class Read(asyncio.Future):
     @staticmethod
     def is_compatible(holds):
@@ -76,43 +82,121 @@ class SemaphoreBase(asyncio.Future):
 class TestFifoLock(unittest.TestCase):
 
     @async_test
-    async def test_read_write_lock(self):
+    async def test_mutex_blocks_mutex(self):
+
         lock = FifoLock()
 
-        tasks = create_lock_tasks(
+        started_history = await mutate_tasks_in_sequence(create_lock_tasks(
             lock,
-            Write, Read, Read, Write, Read, Read)
-        started_history = await mutate_tasks_in_sequence(
-            tasks,
-            complete(0), complete(2), complete(1), cancel(4), complete(3),
+            Mutex, Mutex),
+            complete(0), complete(1),
         )
 
-        # Ensure only the first write has started...
-        self.assertEqual(started_history[0], [True, False, False, False, False, False])
+        self.assertEqual(started_history[0], [True, False])
+        self.assertEqual(started_history[1], [True, True])
 
-        # ... then only the next reads start...
-        self.assertEqual(started_history[1], [True, True, True, False, False, False])
+    @async_test
+    async def test_mutex_cancelled_after_it_starts_allows_later_mutex(self):
 
-        # ... tasks finishing out of order doesn't change things...
-        self.assertEqual(started_history[2], [True, True, True, False, False, False])
+        lock = FifoLock()
 
-        # # ... a queued write starts only after all previous access finished...
-        self.assertEqual(started_history[3], [True, True, True, True, False, False])
-
-        # ... cancelling a task doesn't change things...
-        self.assertEqual(started_history[4], [True, True, True, True, False, False])
-
-        # ... and doesn't stop later tasks from running
-        self.assertEqual(started_history[5], [True, True, True, True, True, True])
-
-        # ... and a read requested during a read can proceed
-        concurrently_added_started = await mutate_tasks_in_sequence(create_lock_tasks(
-            lock, Read),
-            complete(0),
+        started_history = await mutate_tasks_in_sequence(create_lock_tasks(
+            lock,
+            Mutex, Mutex, Mutex),
+            complete(0), cancel(1), complete(2),
         )
-        self.assertEqual(concurrently_added_started[0], [True])
 
-        complete(5)(tasks)
+        self.assertEqual(started_history[0], [True, False, False])
+        self.assertEqual(started_history[1], [True, True, False])
+        self.assertEqual(started_history[2], [True, True, True])
+
+    @async_test
+    async def test_mutex_requested_concurrently_can_start(self):
+
+        lock = FifoLock()
+
+        tasks_1 = create_lock_tasks(lock, Mutex)
+        started_history_1 = await mutate_tasks_in_sequence(tasks_1)  # No mutation
+
+        tasks_2 = create_lock_tasks(lock, Mutex)
+        started_history_2 = await mutate_tasks_in_sequence(
+            tasks_1 + tasks_2,
+            complete(0), complete(1),
+        )
+
+        self.assertEqual(started_history_2[0], [True, False])
+        self.assertEqual(started_history_2[1], [True, True])
+
+    @async_test
+    async def test_read_write_lock_write_blocks_write(self):
+
+        lock = FifoLock()
+
+        started_history = await mutate_tasks_in_sequence(create_lock_tasks(
+            lock,
+            Write, Write),
+            complete(0), complete(1),
+        )
+
+        self.assertEqual(started_history[0], [True, False])
+        self.assertEqual(started_history[1], [True, True])
+
+    @async_test
+    async def test_read_write_lock_write_blocks_read(self):
+
+        lock = FifoLock()
+
+        started_history = await mutate_tasks_in_sequence(create_lock_tasks(
+            lock,
+            Write, Read),
+            complete(0), complete(1),
+        )
+
+        self.assertEqual(started_history[0], [True, False])
+        self.assertEqual(started_history[1], [True, True])
+
+    @async_test
+    async def test_read_write_lock_read_allows_read(self):
+
+        lock = FifoLock()
+
+        started_history = await mutate_tasks_in_sequence(create_lock_tasks(
+            lock,
+            Read, Read),
+            complete(0), complete(1),
+        )
+
+        self.assertEqual(started_history[0], [True, True])
+        self.assertEqual(started_history[1], [True, True])
+
+    @async_test
+    async def test_read_write_lock_read_blocks_write(self):
+
+        lock = FifoLock()
+
+        started_history = await mutate_tasks_in_sequence(create_lock_tasks(
+            lock,
+            Read, Write),
+            complete(0), complete(1),
+        )
+
+        self.assertEqual(started_history[0], [True, False])
+        self.assertEqual(started_history[1], [True, True])
+
+    @async_test
+    async def test_read_write_lock_reads_complete_out_of_order_still_block_write(self):
+
+        lock = FifoLock()
+
+        started_history = await mutate_tasks_in_sequence(create_lock_tasks(
+            lock,
+            Read, Read, Write),
+            complete(1), complete(0), complete(2),
+        )
+
+        self.assertEqual(started_history[0], [True, True, False])
+        self.assertEqual(started_history[1], [True, True, False])
+        self.assertEqual(started_history[2], [True, True, True])
 
     @async_test
     async def test_semaphore(self):
