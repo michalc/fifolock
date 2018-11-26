@@ -37,7 +37,7 @@ async def mutate_tasks_in_sequence(task_states, *funcs):
 
 def cancel(i):
     async def func(tasks):
-        tasks[i].done.cancel()
+        tasks[i].task.cancel()
     return func
 
 
@@ -127,8 +127,7 @@ class TestFifoLock(unittest.TestCase):
 
         self.assertEqual(started_history[0], [True, False, False])
         self.assertEqual(started_history[1], [True, False, False])
-        self.assertEqual(started_history[2], [True, True, False])
-        self.assertEqual(started_history[3], [True, True, True])
+        self.assertEqual(started_history[2], [True, False, True])
 
     @async_test
     async def test_mutex_requested_concurrently_can_start(self):
