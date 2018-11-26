@@ -47,6 +47,12 @@ def complete(i):
     return func
 
 
+def exception(i, exception):
+    async def func(tasks):
+        tasks[i].done.set_exception(exception)
+    return func
+
+
 async def null(_):
     pass
 
@@ -96,6 +102,24 @@ class TestFifoLock(unittest.TestCase):
             complete(0), complete(1),
         )
 
+        self.assertEqual(started_history[0], [True, False])
+        self.assertEqual(started_history[1], [True, True])
+
+    @async_test
+    async def test_mutex_raising_exception_bubbles_and_allows_later_mutex(self):
+
+        lock = FifoLock()
+
+        tasks = create_lock_tasks(
+            lock,
+            Mutex, Mutex)
+        exp = Exception('Raised exception')
+        started_history = await mutate_tasks_in_sequence(
+            tasks,
+            exception(0, exp), complete(1),
+        )
+
+        self.assertEqual(tasks[0].task.exception(), exp)
         self.assertEqual(started_history[0], [True, False])
         self.assertEqual(started_history[1], [True, True])
 
