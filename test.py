@@ -111,6 +111,22 @@ class TestFifoLock(unittest.TestCase):
         self.assertEqual(started_history[2], [True, True, True])
 
     @async_test
+    async def test_mutex_cancelled_before_it_starts_allows_later_mutex(self):
+
+        lock = FifoLock()
+
+        started_history = await mutate_tasks_in_sequence(create_lock_tasks(
+            lock,
+            Mutex, Mutex, Mutex),
+            cancel(1), complete(0), complete(2),
+        )
+
+        self.assertEqual(started_history[0], [True, False, False])
+        self.assertEqual(started_history[1], [True, False, False])
+        self.assertEqual(started_history[2], [True, True, False])
+        self.assertEqual(started_history[3], [True, True, True])
+
+    @async_test
     async def test_mutex_requested_concurrently_can_start(self):
 
         lock = FifoLock()
