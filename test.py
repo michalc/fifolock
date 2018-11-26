@@ -23,8 +23,28 @@ def create_lock_tasks(lock, *modes):
     return [task(mode) for mode in modes]
 
 
-def has_started(task_states):
-    return [state.started.done() for state in task_states]
+async def mutate_tasks_in_sequence(task_states, *funcs):
+    history = []
+
+    for func in funcs + (lambda _: None, ):
+        await asyncio.sleep(0)
+        await asyncio.sleep(0)
+        history.append([state.started.done() for state in task_states])
+        func(task_states)
+
+    return history
+
+
+def cancel(i):
+    def func(tasks):
+        tasks[i].done.cancel()
+    return func
+
+
+def complete(i):
+    def func(tasks):
+        tasks[i].done.set_result(None)
+    return func
 
 
 def async_test(func):
@@ -58,71 +78,55 @@ class TestFifoLock(unittest.TestCase):
     @async_test
     async def test_read_write_lock(self):
         lock = FifoLock()
-        task_states = create_lock_tasks(lock, Write, Read, Read, Write, Read, Read)
 
-        await asyncio.sleep(0)
+        tasks = create_lock_tasks(
+            lock,
+            Write, Read, Read, Write, Read, Read)
+        started_history = await mutate_tasks_in_sequence(
+            tasks,
+            complete(0), complete(2), complete(1), cancel(4), complete(3),
+        )
+
         # Ensure only the first write has started...
-        self.assertEqual(all(has_started(task_states)[0:1]), True)
-        self.assertEqual(any(has_started(task_states)[1:]), False)
+        self.assertEqual(started_history[0], [True, False, False, False, False, False])
 
-        task_states[0].done.set_result(None)
-        await asyncio.sleep(0)
-        await asyncio.sleep(0)
         # ... then only the next reads start...
-        self.assertEqual(all(has_started(task_states)[1:3]), True)
-        self.assertEqual(any(has_started(task_states)[3:]), False)
+        self.assertEqual(started_history[1], [True, True, True, False, False, False])
 
-        task_states[2].done.set_result(None)
-        await asyncio.sleep(0)
-        await asyncio.sleep(0)
         # ... tasks finishing out of order doesn't change things...
-        self.assertEqual(any(has_started(task_states)[3:]), False)
+        self.assertEqual(started_history[2], [True, True, True, False, False, False])
 
-        task_states[1].done.set_result(None)
-        await asyncio.sleep(0)
-        await asyncio.sleep(0)
-        # ... a queued write starts only after all previous access finished...
-        self.assertEqual(all(has_started(task_states)[3:4]), True)
-        self.assertEqual(any(has_started(task_states)[4:]), False)
+        # # ... a queued write starts only after all previous access finished...
+        self.assertEqual(started_history[3], [True, True, True, True, False, False])
 
-        task_states[4].task.cancel()
-        await asyncio.sleep(0)
-        await asyncio.sleep(0)
         # ... cancelling a task doesn't change things...
-        self.assertEqual(all(has_started(task_states)[3:4]), True)
-        self.assertEqual(any(has_started(task_states)[4:]), False)
+        self.assertEqual(started_history[4], [True, True, True, True, False, False])
 
-        task_states[3].done.set_result(None)
-        await asyncio.sleep(0)
-        await asyncio.sleep(0)
         # ... and doesn't stop later tasks from running
-        self.assertEqual(all(has_started(task_states)[5:6]), True)
+        self.assertEqual(started_history[5], [True, True, True, True, True, True])
 
-        concurrently_added_task = create_lock_tasks(lock, Read)
-        await asyncio.sleep(0)
         # ... and a read requested during a read can proceed
-        self.assertEqual(all(has_started(concurrently_added_task)), True)
+        concurrently_added_started = await mutate_tasks_in_sequence(create_lock_tasks(
+            lock, Read),
+            complete(0),
+        )
+        self.assertEqual(concurrently_added_started[0], [True])
 
-        task_states[5].done.set_result(None)
-        concurrently_added_task[0].done.set_result(None)
+        complete(5)(tasks)
 
     @async_test
     async def test_semaphore(self):
         lock = FifoLock()
         Semaphore = type('Semaphore', (SemaphoreBase, ), {'size': 2})
 
-        task_states = create_lock_tasks(lock, Semaphore, Semaphore, Semaphore)
+        started_history = await mutate_tasks_in_sequence(create_lock_tasks(
+            lock,
+            Semaphore, Semaphore, Semaphore),
+            complete(1), complete(0), complete(2),
+        )
 
-        await asyncio.sleep(0)
         # Ensure only the first two have started...
-        self.assertEqual(all(has_started(task_states)[0:2]), True)
-        self.assertEqual(any(has_started(task_states)[2:]), False)
+        self.assertEqual(started_history[0], [True, True, False])
 
         # ... and one finishing allows the final to proceed
-        task_states[1].done.set_result(None)
-        await asyncio.sleep(0)
-        await asyncio.sleep(0)
-        self.assertEqual(all(has_started(task_states)[2:2]), True)
-
-        task_states[0].done.set_result(None)
-        task_states[2].done.set_result(None)
+        self.assertEqual(started_history[1], [True, True, True])
