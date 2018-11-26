@@ -26,23 +26,26 @@ def create_lock_tasks(lock, *modes):
 async def mutate_tasks_in_sequence(task_states, *funcs):
     history = []
 
-    for func in funcs + (lambda _: None, ):
+    async def null(_):
+        pass
+
+    for func in funcs + (null, ):
         await asyncio.sleep(0)
         await asyncio.sleep(0)
         history.append([state.started.done() for state in task_states])
-        func(task_states)
+        await func(task_states)
 
     return history
 
 
 def cancel(i):
-    def func(tasks):
+    async def func(tasks):
         tasks[i].done.cancel()
     return func
 
 
 def complete(i):
-    def func(tasks):
+    async def func(tasks):
         tasks[i].done.set_result(None)
     return func
 
