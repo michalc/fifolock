@@ -35,20 +35,28 @@ def async_test(func):
     return wrapper
 
 
+class Read(asyncio.Future):
+    @staticmethod
+    def is_compatible(holds):
+        return not holds[Write]
+
+
+class Write(asyncio.Future):
+    @staticmethod
+    def is_compatible(holds):
+        return not holds[Read] and not holds[Write]
+
+
+class SemaphoreBase(asyncio.Future):
+    @classmethod
+    def is_compatible(cls, holds):
+        return holds[cls] < cls.size
+
+
 class TestFifoLock(unittest.TestCase):
 
     @async_test
     async def test_read_write_lock(self):
-        class Read(asyncio.Future):
-            @staticmethod
-            def is_compatible(holds):
-                return not holds[Write]
-
-        class Write(asyncio.Future):
-            @staticmethod
-            def is_compatible(holds):
-                return not holds[Read] and not holds[Write]
-
         lock = FifoLock()
         task_states = create_lock_tasks(lock, Write, Read, Read, Write, Read, Read)
 
@@ -100,11 +108,6 @@ class TestFifoLock(unittest.TestCase):
 
     @async_test
     async def test_semaphore(self):
-        class SemaphoreBase(asyncio.Future):
-            @classmethod
-            def is_compatible(cls, holds):
-                return holds[cls] < cls.size
-
         lock = FifoLock()
         Semaphore = type('Semaphore', (SemaphoreBase, ), {'size': 2})
 
