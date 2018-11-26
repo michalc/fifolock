@@ -18,7 +18,7 @@ setuptools.setup(
     py_modules=[
         'fifolock',
     ],
-    python_requires='>=3.7',
+    python_requires='>=3.5',
     test_suite='test',
     classifiers=[
         'Programming Language :: Python :: 3',

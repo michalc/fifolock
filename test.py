@@ -17,7 +17,7 @@ def create_lock_tasks(*modes):
     def task(mode):
         started = asyncio.Future()
         done = asyncio.Future()
-        task = asyncio.create_task(access(mode, started, done))
+        task = asyncio.ensure_future(access(mode, started, done))
         return TaskState(started=started, done=done, task=task)
 
     return [task(mode) for mode in modes]
@@ -98,6 +98,20 @@ class TestFifoLock(unittest.TestCase):
 
         started_history = await mutate_tasks_in_sequence(create_lock_tasks(
             lock(Mutex), lock(Mutex)),
+            complete(0), complete(1),
+        )
+
+        self.assertEqual(started_history[0], [True, False])
+        self.assertEqual(started_history[1], [True, True])
+
+    @async_test
+    async def test_mode_can_be_reused(self):
+
+        lock = FifoLock()
+        mode_instance = lock(Mutex)
+
+        started_history = await mutate_tasks_in_sequence(create_lock_tasks(
+            mode_instance, mode_instance),
             complete(0), complete(1),
         )
 
