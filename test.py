@@ -26,9 +26,6 @@ def create_lock_tasks(lock, *modes):
 async def mutate_tasks_in_sequence(task_states, *funcs):
     history = []
 
-    async def null(_):
-        pass
-
     for func in funcs + (null, ):
         await asyncio.sleep(0)
         await asyncio.sleep(0)
@@ -48,6 +45,10 @@ def complete(i):
     async def func(tasks):
         tasks[i].done.set_result(None)
     return func
+
+
+async def null(_):
+    pass
 
 
 def async_test(func):
@@ -121,7 +122,7 @@ class TestFifoLock(unittest.TestCase):
         started_history = await mutate_tasks_in_sequence(create_lock_tasks(
             lock,
             Mutex, Mutex, Mutex),
-            cancel(1), complete(0), complete(2),
+            cancel(1), complete(0), null, complete(2),
         )
 
         self.assertEqual(started_history[0], [True, False, False])
