@@ -274,6 +274,19 @@ class TestFifoLock(unittest.TestCase):
         self.assertEqual(acquisition_history[2], [True, True, True])
 
     @async_test
+    async def test_semaphore_complete_in_order(self):
+        lock = FifoLock()
+        Semaphore = type('Semaphore', (SemaphoreBase, ), {'size': 2})
+
+        acquisition_history = await mutate_tasks_in_sequence(create_lock_tasks(
+            lock(Semaphore), lock(Semaphore), lock(Semaphore)),
+            complete(0), complete(1), complete(2),
+        )
+
+        self.assertEqual(acquisition_history[0], [True, True, False])
+        self.assertEqual(acquisition_history[1], [True, True, True])
+
+    @async_test
     async def test_semaphore_complete_out_of_order(self):
         lock = FifoLock()
         Semaphore = type('Semaphore', (SemaphoreBase, ), {'size': 2})
