@@ -274,7 +274,7 @@ class TestFifoLock(unittest.TestCase):
         self.assertEqual(acquisition_history[2], [True, True, True])
 
     @async_test
-    async def test_semaphore(self):
+    async def test_semaphore_complete_out_of_order(self):
         lock = FifoLock()
         Semaphore = type('Semaphore', (SemaphoreBase, ), {'size': 2})
 
@@ -283,8 +283,5 @@ class TestFifoLock(unittest.TestCase):
             complete(1), complete(0), complete(2),
         )
 
-        # Ensure only the first two have acquired...
         self.assertEqual(acquisition_history[0], [True, True, False])
-
-        # ... and one finishing allows the final to proceed
         self.assertEqual(acquisition_history[1], [True, True, True])
