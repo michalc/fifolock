@@ -247,6 +247,20 @@ class TestFifoLock(unittest.TestCase):
         self.assertEqual(started_history[2], [True, True, True])
 
     @async_test
+    async def test_read_write_lock_write_not_given_priority_over_read(self):
+
+        lock = FifoLock()
+
+        started_history = await mutate_tasks_in_sequence(create_lock_tasks(
+            lock(Write), lock(Read), lock(Write)),
+            complete(0), complete(1), complete(2),
+        )
+
+        self.assertEqual(started_history[0], [True, False, False])
+        self.assertEqual(started_history[1], [True, True, False])
+        self.assertEqual(started_history[2], [True, True, True])
+
+    @async_test
     async def test_semaphore(self):
         lock = FifoLock()
         Semaphore = type('Semaphore', (SemaphoreBase, ), {'size': 2})
