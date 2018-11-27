@@ -105,7 +105,7 @@ class TestFifoLock(unittest.TestCase):
         self.assertEqual(acquisition_history[1], [True, True])
 
     @async_test
-    async def test_mode_can_be_reused(self):
+    async def test_mutex_mode_can_be_reused(self):
 
         lock = FifoLock()
         mode_instance = lock(Mutex)
