@@ -1,11 +1,14 @@
-import collections
+from collections import (
+    defaultdict as _defaultdict,
+    deque as _deque,
+)
 
 
 class FifoLock():
 
     def __init__(self):
-        self._waiters = collections.deque()
-        self._holds = collections.defaultdict(int)
+        self._waiters = _deque()
+        self._holds = _defaultdict(int)
 
     def __call__(self, lock_mode_type):
         return _FifoLockContextManager(self._waiters, self._holds, lock_mode_type)
