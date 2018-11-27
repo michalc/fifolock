@@ -8,7 +8,7 @@ def long_description():
 
 setuptools.setup(
     name='fifolock',
-    version='0.0.15',
+    version='0.0.16',
     author='Michal Charemza',
     author_email='michal@charemza.name',
     description='A flexible low-level tool to make synchronisation primitives in asyncio Python',
