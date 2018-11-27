@@ -169,7 +169,7 @@ class TestFifoLock(unittest.TestCase):
 
         acquisition_history = await mutate_tasks_in_sequence(create_lock_tasks(
             lock(Mutex), lock(Mutex), lock(Mutex)),
-            cancel(1), complete(0), null, complete(2),
+            cancel(1), complete(0), complete(2),
         )
 
         self.assertEqual(acquisition_history[0], [True, False, False])
