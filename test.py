@@ -119,6 +119,19 @@ class TestFifoLock(unittest.TestCase):
         self.assertEqual(acquisition_history[1], [True, True])
 
     @async_test
+    async def test_mutex_are_independant(self):
+
+        lock_1 = FifoLock()
+        lock_2 = FifoLock()
+
+        acquisition_history = await mutate_tasks_in_sequence(create_lock_tasks(
+            lock_1(Mutex), lock_2(Mutex)),
+            complete(0), complete(1),
+        )
+
+        self.assertEqual(acquisition_history[0], [True, True])
+
+    @async_test
     async def test_mutex_raising_exception_bubbles_and_allows_later_mutex(self):
 
         lock = FifoLock()
