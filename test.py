@@ -2,7 +2,7 @@ import asyncio
 import collections
 import unittest
 
-from fifolock import FifoLock
+from fifolock import FifoLock, Mutex, Read, Write, semaphore_factory
 
 
 TaskState = collections.namedtuple('TaskState', ['acquired', 'done', 'task'])
@@ -63,30 +63,6 @@ def async_test(func):
         loop = asyncio.get_event_loop()
         loop.run_until_complete(future)
     return wrapper
-
-
-class Mutex(asyncio.Future):
-    @staticmethod
-    def is_compatible(holds):
-        return not holds[Mutex]
-
-
-class Read(asyncio.Future):
-    @staticmethod
-    def is_compatible(holds):
-        return not holds[Write]
-
-
-class Write(asyncio.Future):
-    @staticmethod
-    def is_compatible(holds):
-        return not holds[Read] and not holds[Write]
-
-
-class SemaphoreBase(asyncio.Future):
-    @classmethod
-    def is_compatible(cls, holds):
-        return holds[cls] < cls.size
 
 
 class TestFifoLock(unittest.TestCase):
@@ -182,7 +158,7 @@ class TestFifoLock(unittest.TestCase):
         lock = FifoLock()
 
         tasks_1 = create_lock_tasks(lock(Mutex))
-        acquisition_history_1 = await mutate_tasks_in_sequence(tasks_1)  # No mutation
+        await mutate_tasks_in_sequence(tasks_1)  # No mutation
 
         tasks_2 = create_lock_tasks(lock(Mutex))
         acquisition_history_2 = await mutate_tasks_in_sequence(
@@ -276,7 +252,7 @@ class TestFifoLock(unittest.TestCase):
     @async_test
     async def test_semaphore_complete_in_order(self):
         lock = FifoLock()
-        Semaphore = type('Semaphore', (SemaphoreBase, ), {'size': 2})
+        Semaphore = semaphore_factory(2)
 
         acquisition_history = await mutate_tasks_in_sequence(create_lock_tasks(
             lock(Semaphore), lock(Semaphore), lock(Semaphore)),
@@ -289,7 +265,7 @@ class TestFifoLock(unittest.TestCase):
     @async_test
     async def test_semaphore_complete_out_of_order(self):
         lock = FifoLock()
-        Semaphore = type('Semaphore', (SemaphoreBase, ), {'size': 2})
+        Semaphore = semaphore_factory(2)
 
         acquisition_history = await mutate_tasks_in_sequence(create_lock_tasks(
             lock(Semaphore), lock(Semaphore), lock(Semaphore)),

@@ -1,14 +1,12 @@
-from collections import (
-    defaultdict as _defaultdict,
-    deque as _deque,
-)
+import asyncio
+from collections import defaultdict, deque
 
 
 class FifoLock():
 
     def __init__(self):
-        self._waiters = _deque()
-        self._holds = _defaultdict(int)
+        self._waiters = deque()
+        self._holds = defaultdict(int)
 
     def __call__(self, lock_mode_type):
         return _FifoLockContextManager(self._waiters, self._holds, lock_mode_type)
@@ -44,3 +42,31 @@ class _FifoLockContextManager():
     async def __aexit__(self, _, __, ___):
         self._holds[self._lock_mode_type] -= 1
         self._maybe_acquire()
+
+
+class Mutex(asyncio.Future):
+    @staticmethod
+    def is_compatible(holds):
+        return not holds[Mutex]
+
+
+class Read(asyncio.Future):
+    @staticmethod
+    def is_compatible(holds):
+        return not holds[Write]
+
+
+class Write(asyncio.Future):
+    @staticmethod
+    def is_compatible(holds):
+        return not holds[Read] and not holds[Write]
+
+
+class SemaphoreBase(asyncio.Future):
+    @classmethod
+    def is_compatible(cls, holds):
+        return holds[cls] < cls.size
+
+
+def semaphore_factory(size):
+    return type('Semaphore', (SemaphoreBase, ), {'size': size})
