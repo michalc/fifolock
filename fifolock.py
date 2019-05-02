@@ -1,3 +1,6 @@
+from asyncio import (
+    CancelledError as _CancelledError,
+)
 from collections import (
     defaultdict as _defaultdict,
     deque as _deque,
@@ -39,7 +42,14 @@ class _FifoLockContextManager():
         lock_mode = self._lock_mode_type()
         self._waiters.append(lock_mode)
         self._maybe_acquire()
-        await lock_mode
+        try:
+            await lock_mode
+        except _CancelledError:
+            # The waiter could have been resolved, but the task then cancelled
+            if lock_mode.done() and not lock_mode.cancelled():
+                self._holds[type(lock_mode)] -= 1
+            self._maybe_acquire()
+            raise
 
     async def __aexit__(self, _, __, ___):
         self._holds[self._lock_mode_type] -= 1
