@@ -48,7 +48,7 @@ class _FifoLockContextManager():
             # The waiter could have been resolved, but the task then cancelled
             if lock_mode.done() and not lock_mode.cancelled():
                 self._holds[type(lock_mode)] -= 1
-            self._maybe_acquire()
+                self._maybe_acquire()
             raise
 
     async def __aexit__(self, _, __, ___):
