@@ -177,6 +177,38 @@ class TestFifoLock(unittest.TestCase):
         self.assertEqual(acquisition_history[2], [True, False, True])
 
     @async_test
+    async def test_mutex_cancelled_that_cancels_second_task_allows_third(self):
+
+        lock = FifoLock()
+        done = asyncio.Future()
+        acquired_1 = asyncio.Future()
+        acquired_3 = asyncio.Future()
+
+        async def access_1():
+            try:
+                async with lock(Mutex):
+                    acquired_1.set_result(None)
+                    await done
+            except asyncio.CancelledError:
+                task_2.cancel()
+
+        async def access_2():
+            async with lock(Mutex):
+                await done
+
+        async def access_3():
+            async with lock(Mutex):
+                acquired_3.set_result(None)
+
+        task_1 = asyncio.ensure_future(access_1())
+        task_2 = asyncio.ensure_future(access_2())
+        asyncio.ensure_future(access_3())
+
+        await acquired_1
+        task_1.cancel()
+        await acquired_3
+
+    @async_test
     async def test_mutex_requested_concurrently_can_acquire(self):
 
         lock = FifoLock()
